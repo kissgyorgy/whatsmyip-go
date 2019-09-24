@@ -72,7 +72,7 @@ func main() {
 		resolver := newResolver(lm)
 		res, err := lookupRecord(lm, resolver)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 			continue
 		}
 		fmt.Println(res)
