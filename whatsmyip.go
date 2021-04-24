@@ -17,8 +17,24 @@ var lookupMethods = []lookupMethod{
 }
 
 var version string
+var timeout time.Duration
+
+const usage = `WhatsmyIP is a small IP address lookup utility.
+It works by sending a DNS lookup. There are multiple
+services set, if one fails, it tries the next.
+
+Usage: %s [options]
+
+Options:
+`
 
 func init() {
+	flag.Usage = func() {
+		out := flag.CommandLine.Output()
+		fmt.Fprintf(out, usage, os.Args[0])
+		flag.PrintDefaults()
+	}
+
 	ip4 := flag.Bool("4", false, "Lookup IPv4 address (default)")
 	ip6 := flag.Bool("6", false, "Lookup IPv6 address")
 	timeoutSeconds := flag.Int("t", 3, "Timeout for DNS lookup in seconds")
