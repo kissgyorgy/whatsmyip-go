@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -13,6 +14,25 @@ var lookupMethods = []lookupMethod{
 	{"ns1.google.com", "o-o.myaddr.l.google.com", txt},
 	{"resolver1.opendns.com", "myip.opendns.com", aRecord},
 	{"ns1-1.akamaitech.net", "whoami.akamai.net", aRecord},
+}
+
+var version string
+
+func init() {
+	ip4 := flag.Bool("4", false, "Lookup IPv4 address (default)")
+	ip6 := flag.Bool("6", false, "Lookup IPv6 address")
+	flag.Parse()
+
+	if *ip4 && *ip6 {
+		fmt.Fprintln(os.Stderr, "Only one of -4 or -6 can be specified!")
+		os.Exit(1)
+	}
+
+	if *ip4 || (!*ip4 && !*ip6) {
+		version = "4"
+	} else {
+		version = "6"
+	}
 }
 
 // Timeout for DNS lookup
@@ -31,13 +51,13 @@ type lookupMethod struct {
 	lookupType lookupType
 }
 
-func newResolver(lm lookupMethod) *net.Resolver {
+func newResolver(lm lookupMethod, version string) *net.Resolver {
 	return &net.Resolver{
 		// https://github.com/golang/go/issues/19268
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
 			d := net.Dialer{}
-			return d.DialContext(ctx, "udp", lm.nameServer+":53")
+			return d.DialContext(ctx, "udp"+version, lm.nameServer+":53")
 		},
 	}
 }
@@ -69,7 +89,7 @@ func lookupRecord(lm lookupMethod, resolver *net.Resolver) (string, error) {
 func main() {
 	success := false
 	for _, lm := range lookupMethods {
-		resolver := newResolver(lm)
+		resolver := newResolver(lm, version)
 		res, err := lookupRecord(lm, resolver)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
