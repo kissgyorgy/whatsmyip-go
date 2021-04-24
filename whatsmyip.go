@@ -21,6 +21,7 @@ var version string
 func init() {
 	ip4 := flag.Bool("4", false, "Lookup IPv4 address (default)")
 	ip6 := flag.Bool("6", false, "Lookup IPv6 address")
+	timeoutSeconds := flag.Int("t", 3, "Timeout for DNS lookup in seconds")
 	flag.Parse()
 
 	if *ip4 && *ip6 {
@@ -33,10 +34,9 @@ func init() {
 	} else {
 		version = "6"
 	}
-}
 
-// Timeout for DNS lookup
-const TimeoutSeconds = 3
+	timeout = time.Duration(*timeoutSeconds) * time.Second
+}
 
 type lookupType int
 
@@ -62,8 +62,8 @@ func newResolver(lm lookupMethod, version string) *net.Resolver {
 	}
 }
 
-func lookupRecord(lm lookupMethod, resolver *net.Resolver) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), TimeoutSeconds*time.Second)
+func lookupRecord(lm lookupMethod, resolver *net.Resolver, timeout time.Duration) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	var res string
@@ -90,7 +90,7 @@ func main() {
 	success := false
 	for _, lm := range lookupMethods {
 		resolver := newResolver(lm, version)
-		res, err := lookupRecord(lm, resolver)
+		res, err := lookupRecord(lm, resolver, timeout)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			continue
